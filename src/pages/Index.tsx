@@ -50,19 +50,28 @@ const Index = () => {
       
       <main className="container mx-auto py-8 flex-1">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          <div>
-            <h2 className="text-2xl font-bold mb-4 text-finance-navy">Market Brief</h2>
+          <div className="transform transition-all duration-500 hover:translate-y-[-5px]">
+            <h2 className="text-2xl font-bold mb-4 text-finance-navy flex items-center">
+              <span className="bg-finance-navy text-white px-2 py-1 rounded-md mr-2 text-sm">AI</span>
+              Market Brief
+            </h2>
             <MarketBrief brief={brief} loading={loading || isProcessing} />
           </div>
           
-          <div>
-            <h2 className="text-2xl font-bold mb-4 text-finance-navy">Voice Assistant</h2>
+          <div className="transform transition-all duration-500 hover:translate-y-[-5px]">
+            <h2 className="text-2xl font-bold mb-4 text-finance-navy flex items-center">
+              <span className="bg-finance-teal text-white px-2 py-1 rounded-md mr-2 text-sm">VOICE</span>
+              Finance Assistant
+            </h2>
             <VoiceInput onSubmit={handleSubmit} disabled={loading || isProcessing} />
           </div>
         </div>
         
-        <div>
-          <h2 className="text-2xl font-bold mb-4 text-finance-navy">Market Data</h2>
+        <div className="transform transition-all duration-500 hover:translate-y-[-5px]">
+          <h2 className="text-2xl font-bold mb-4 text-finance-navy flex items-center">
+            <span className="bg-finance-gold text-finance-navy px-2 py-1 rounded-md mr-2 text-sm">DATA</span>
+            Market Data
+          </h2>
           <MarketData data={marketData} loading={loading} />
         </div>
       </main>

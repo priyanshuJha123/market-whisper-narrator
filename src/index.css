@@ -79,10 +79,63 @@
   }
 }
 
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out forwards;
+}
+
 .finance-card {
   @apply bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden;
 }
 
 .finance-gradient {
   background: linear-gradient(135deg, #0A2463 0%, #1E847F 100%);
+}
+
+/* Enhance hover effects */
+.finance-card:hover {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-color: #1E847F;
+}
+
+/* Pulsing effect for active elements */
+.pulse-element {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(30, 132, 127, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(30, 132, 127, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(30, 132, 127, 0);
+  }
 }
