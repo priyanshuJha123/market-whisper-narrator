@@ -15,14 +15,14 @@ export const useVoiceInput = () => {
     ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
   
   // Use Web Speech API for actual speech recognition
-  const SpeechRecognition = typeof window !== 'undefined' ? 
-    window.SpeechRecognition || (window as any).webkitSpeechRecognition : null;
+  const SpeechRecognitionAPI = typeof window !== 'undefined' ? 
+    (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
   
   const [recognition, setRecognition] = useState<any>(null);
   
   useEffect(() => {
-    if (browserSupportsSpeechRecognition && !recognition) {
-      const recognitionInstance = new SpeechRecognition();
+    if (browserSupportsSpeechRecognition && !recognition && SpeechRecognitionAPI) {
+      const recognitionInstance = new SpeechRecognitionAPI();
       recognitionInstance.continuous = true;
       recognitionInstance.interimResults = true;
       recognitionInstance.lang = 'en-US';
