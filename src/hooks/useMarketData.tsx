@@ -54,6 +54,11 @@ export const useMarketData = () => {
     }
   };
 
+  // New function to directly set the market brief
+  const setMarketBrief = (briefData: MarketBrief) => {
+    setBrief(briefData);
+  };
+
   useEffect(() => {
     // Fetch initial market data on component mount
     getMarketData();
@@ -73,6 +78,7 @@ export const useMarketData = () => {
     voiceResponse,
     getMarketData,
     getMarketBrief,
+    setMarketBrief,
   };
 };
 

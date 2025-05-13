@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { VoiceInputState } from '@/types';
+import { toast } from '@/components/ui/use-toast';
 
 export const useVoiceInput = () => {
   const [state, setState] = useState<VoiceInputState>({
@@ -10,33 +11,111 @@ export const useVoiceInput = () => {
   });
 
   // Check if browser supports Speech Recognition
-  const browserSupportsSpeechRecognition = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
+  const browserSupportsSpeechRecognition = typeof window !== 'undefined' && 
+    ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
   
-  // Mock speech recognition for demo purposes
-  // In a real implementation, this would use the Web Speech API
-  const startListening = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      isListening: true,
-      transcript: '',
-    }));
+  // Use Web Speech API for actual speech recognition
+  const SpeechRecognition = typeof window !== 'undefined' ? 
+    window.SpeechRecognition || (window as any).webkitSpeechRecognition : null;
+  
+  const [recognition, setRecognition] = useState<any>(null);
+  
+  useEffect(() => {
+    if (browserSupportsSpeechRecognition && !recognition) {
+      const recognitionInstance = new SpeechRecognition();
+      recognitionInstance.continuous = true;
+      recognitionInstance.interimResults = true;
+      recognitionInstance.lang = 'en-US';
+      
+      recognitionInstance.onresult = (event: any) => {
+        const transcript = Array.from(event.results)
+          .map((result: any) => result[0])
+          .map((result: any) => result.transcript)
+          .join('');
+        
+        setState(prev => ({
+          ...prev,
+          transcript: transcript,
+        }));
+      };
+      
+      recognitionInstance.onerror = (event: any) => {
+        setState(prev => ({
+          ...prev,
+          isListening: false,
+          error: event.error,
+        }));
+        
+        toast({
+          title: "Speech Recognition Error",
+          description: `Error: ${event.error}`,
+          variant: "destructive",
+        });
+        
+        console.error('Speech recognition error:', event.error);
+      };
+      
+      recognitionInstance.onend = () => {
+        setState(prev => ({
+          ...prev,
+          isListening: false,
+        }));
+      };
+      
+      setRecognition(recognitionInstance);
+    }
+  }, [browserSupportsSpeechRecognition]);
 
-    // Simulate speech recognition with a timeout
-    setTimeout(() => {
+  const startListening = useCallback(() => {
+    if (!browserSupportsSpeechRecognition) {
+      toast({
+        title: "Browser not supported",
+        description: "Your browser doesn't support speech recognition.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      if (recognition) {
+        setState(prev => ({
+          ...prev,
+          isListening: true,
+          error: null,
+        }));
+        
+        recognition.start();
+        
+        toast({
+          title: "Listening",
+          description: "Speak now...",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to start speech recognition:", error);
+      toast({
+        title: "Recognition failed to start",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+      
       setState(prev => ({
         ...prev,
         isListening: false,
-        transcript: "What's our risk exposure in Asia tech stocks today, and highlight any earnings surprises?",
+        error: "Failed to start recognition",
       }));
-    }, 3000);
-  }, []);
+    }
+  }, [browserSupportsSpeechRecognition, recognition]);
 
   const stopListening = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      isListening: false,
-    }));
-  }, []);
+    if (recognition && state.isListening) {
+      recognition.stop();
+      setState(prev => ({
+        ...prev,
+        isListening: false,
+      }));
+    }
+  }, [recognition, state.isListening]);
 
   const resetTranscript = useCallback(() => {
     setState(prev => ({
@@ -46,13 +125,13 @@ export const useVoiceInput = () => {
   }, []);
 
   useEffect(() => {
-    // Clean up any resources if needed
+    // Clean up resources when component unmounts
     return () => {
-      if (state.isListening) {
-        stopListening();
+      if (recognition && state.isListening) {
+        recognition.stop();
       }
     };
-  }, [state.isListening, stopListening]);
+  }, [recognition, state.isListening]);
 
   return {
     ...state,

@@ -6,15 +6,42 @@ import MarketBrief from "@/components/MarketBrief";
 import MarketData from "@/components/MarketData";
 import Footer from "@/components/Footer";
 import useMarketData from "@/hooks/useMarketData";
+import { toast } from "@/components/ui/use-toast";
+import { processVoiceQuery } from "@/integrations/supabase/voiceService";
 
 const Index = () => {
-  const { marketData, brief, loading, getMarketBrief } = useMarketData();
+  const { marketData, brief, loading, setMarketBrief } = useMarketData();
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleSubmit = async (query: string) => {
-    setIsProcessing(true);
-    await getMarketBrief(query);
-    setIsProcessing(false);
+    try {
+      setIsProcessing(true);
+      toast({
+        title: "Processing query",
+        description: "Please wait while I analyze the market data..."
+      });
+
+      // Process the query using our Supabase function
+      const briefData = await processVoiceQuery(query);
+      setMarketBrief(briefData);
+      
+      toast({
+        title: "Analysis complete",
+        description: "Market brief has been updated with the latest data."
+      });
+      
+      return briefData;
+    } catch (error) {
+      console.error("Error processing query:", error);
+      toast({
+        title: "Error",
+        description: "Failed to process your query. Please try again.",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
