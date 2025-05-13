@@ -3,6 +3,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { VoiceInputState } from '@/types';
 import { toast } from '@/components/ui/use-toast';
 
+// Define types for Web Speech API
+declare global {
+  interface Window {
+    SpeechRecognition: typeof SpeechRecognition;
+    webkitSpeechRecognition: typeof SpeechRecognition;
+  }
+}
+
 export const useVoiceInput = () => {
   const [state, setState] = useState<VoiceInputState>({
     isListening: false,
@@ -19,6 +27,7 @@ export const useVoiceInput = () => {
     (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
   
   const [recognition, setRecognition] = useState<any>(null);
+  const [finalTranscript, setFinalTranscript] = useState<string>('');
   
   useEffect(() => {
     if (browserSupportsSpeechRecognition && !recognition && SpeechRecognitionAPI) {
@@ -28,15 +37,28 @@ export const useVoiceInput = () => {
       recognitionInstance.lang = 'en-US';
       
       recognitionInstance.onresult = (event: any) => {
-        const transcript = Array.from(event.results)
-          .map((result: any) => result[0])
-          .map((result: any) => result.transcript)
-          .join('');
+        let interimTranscript = '';
+        let finalTranscriptLocal = '';
         
+        // Process results
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscriptLocal += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        
+        // Update state with the current transcript (both interim and final)
         setState(prev => ({
           ...prev,
-          transcript: transcript,
+          transcript: finalTranscriptLocal || interimTranscript,
         }));
+        
+        // Save final transcript separately for use after recognition ends
+        if (finalTranscriptLocal) {
+          setFinalTranscript(prev => prev + ' ' + finalTranscriptLocal);
+        }
       };
       
       recognitionInstance.onerror = (event: any) => {
@@ -56,15 +78,19 @@ export const useVoiceInput = () => {
       };
       
       recognitionInstance.onend = () => {
+        // When recognition ends, make sure we update our state with the final transcript
         setState(prev => ({
           ...prev,
           isListening: false,
+          transcript: finalTranscript.trim() || prev.transcript,
         }));
+        
+        console.log('Speech recognition ended, final transcript:', finalTranscript);
       };
       
       setRecognition(recognitionInstance);
     }
-  }, [browserSupportsSpeechRecognition]);
+  }, [browserSupportsSpeechRecognition, finalTranscript]);
 
   const startListening = useCallback(() => {
     if (!browserSupportsSpeechRecognition) {
@@ -78,6 +104,9 @@ export const useVoiceInput = () => {
     
     try {
       if (recognition) {
+        // Reset the final transcript when starting a new session
+        setFinalTranscript('');
+        
         setState(prev => ({
           ...prev,
           isListening: true,
@@ -110,18 +139,18 @@ export const useVoiceInput = () => {
   const stopListening = useCallback(() => {
     if (recognition && state.isListening) {
       recognition.stop();
-      setState(prev => ({
-        ...prev,
-        isListening: false,
-      }));
+      
+      // We don't update isListening here as that will happen in the onend handler
+      console.log('Stopping listening, current transcript:', state.transcript);
     }
-  }, [recognition, state.isListening]);
+  }, [recognition, state.isListening, state.transcript]);
 
   const resetTranscript = useCallback(() => {
     setState(prev => ({
       ...prev,
       transcript: '',
     }));
+    setFinalTranscript('');
   }, []);
 
   useEffect(() => {

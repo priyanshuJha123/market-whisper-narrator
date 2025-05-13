@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, MicOff, Send, Loader2, Volume } from "lucide-react";
+import { Mic, MicOff, Send, Loader2, Volume2 } from "lucide-react";
 import useVoiceInput from '@/hooks/useVoiceInput';
 import { toast } from "@/components/ui/use-toast";
 
@@ -24,16 +24,17 @@ const VoiceInput = ({ onSubmit, disabled = false }: VoiceInputProps) => {
   const [inputText, setInputText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [showProcessing, setShowProcessing] = useState(false);
 
+  // Update input text when transcript changes
   useEffect(() => {
-    // Update input text when transcript changes
     if (transcript) {
       setInputText(transcript);
     }
   }, [transcript]);
 
+  // Show error toast if there's an error
   useEffect(() => {
-    // Show error toast if there's an error
     if (error) {
       toast({
         title: "Speech Recognition Error",
@@ -43,8 +44,8 @@ const VoiceInput = ({ onSubmit, disabled = false }: VoiceInputProps) => {
     }
   }, [error]);
 
+  // Start animation when listening
   useEffect(() => {
-    // Start animation when listening
     if (isListening) {
       setIsAnimating(true);
     } else {
@@ -58,24 +59,38 @@ const VoiceInput = ({ onSubmit, disabled = false }: VoiceInputProps) => {
 
   // Auto-submit when stopping listening if there's text
   useEffect(() => {
-    if (!isListening && transcript && !isSubmitting) {
+    if (!isListening && transcript && !isSubmitting && !showProcessing) {
+      // Show processing indicator
+      setShowProcessing(true);
+      
       // Small delay to ensure transcript is fully processed
       const timer = setTimeout(() => {
         if (transcript.trim()) {
           handleSubmit();
         }
+        setShowProcessing(false);
       }, 800);
       return () => clearTimeout(timer);
     }
-  }, [isListening, transcript]);
+  }, [isListening, transcript, isSubmitting]);
 
   const handleSubmit = async () => {
     if (inputText.trim()) {
       setIsSubmitting(true);
       try {
+        toast({
+          title: "Processing voice input",
+          description: "Analyzing your query...",
+        });
+        
         await onSubmit(inputText);
-        setInputText('');
-        resetTranscript();
+        
+        // Wait a bit before clearing to show the user what was submitted
+        setTimeout(() => {
+          setInputText('');
+          resetTranscript();
+        }, 1500);
+        
         toast({
           title: "Voice processed",
           description: "Your query has been submitted successfully",
@@ -101,12 +116,15 @@ const VoiceInput = ({ onSubmit, disabled = false }: VoiceInputProps) => {
   };
 
   return (
-    <Card className="finance-card overflow-visible transform transition-all duration-300 hover:shadow-xl">
+    <Card className="finance-card overflow-visible transform transition-all duration-300 hover:shadow-xl relative">
       <CardContent className="p-4">
         <div className="flex flex-col space-y-4">
           <div className="relative">
             <textarea
-              className="w-full p-3 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-finance-teal resize-none min-h-[80px] transition-all duration-300 bg-white dark:bg-gray-800"
+              className={`w-full p-3 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-finance-teal resize-none min-h-[80px] transition-all duration-300 bg-white dark:bg-gray-800
+                ${isListening ? 'border-finance-teal ring-1 ring-finance-teal' : ''}
+                ${inputText ? 'animate-fade-in' : ''}
+              `}
               placeholder="Ask about market data or say 'What's our risk exposure in Asia tech stocks today?'"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
@@ -139,13 +157,12 @@ const VoiceInput = ({ onSubmit, disabled = false }: VoiceInputProps) => {
                 disabled={disabled || isSubmitting}
                 className={`
                   w-full max-w-xs transition-all duration-300 transform hover:scale-105
-                  ${isListening ? 'bg-red-500 hover:bg-red-600' : 'border border-finance-navy text-finance-navy hover:bg-finance-navy hover:text-white'}
-                  ${isAnimating ? 'animate-pulse' : ''}
+                  ${isListening ? 'bg-red-500 hover:bg-red-600 animate-pulse' : 'border border-finance-navy text-finance-navy hover:bg-finance-navy hover:text-white'}
                 `}
               >
                 {isListening ? (
                   <>
-                    <MicOff className="mr-2 h-5 w-5" />
+                    <MicOff className="mr-2 h-5 w-5 animate-bounce" />
                     Stop Listening
                   </>
                 ) : (
@@ -165,21 +182,46 @@ const VoiceInput = ({ onSubmit, disabled = false }: VoiceInputProps) => {
           {isListening && (
             <div className="text-sm text-center text-muted-foreground animate-fade-in">
               <div className="flex justify-center gap-1 my-2">
-                <span className="w-2 h-2 rounded-full bg-finance-teal animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                <span className="w-2 h-2 rounded-full bg-finance-teal animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                <span className="w-2 h-2 rounded-full bg-finance-teal animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <span 
+                    key={i}
+                    className="w-1.5 h-8 rounded-full bg-finance-teal animate-bounce" 
+                    style={{ 
+                      animationDelay: `${i * 100}ms`,
+                      height: `${Math.max(8, Math.random() * 24)}px` 
+                    }}
+                  ></span>
+                ))}
               </div>
               <div className="flex items-center justify-center gap-2">
-                <Volume className="h-4 w-4 animate-pulse text-finance-gold" />
+                <Volume2 className="h-4 w-4 animate-pulse text-finance-gold" />
                 Listening... speak now
               </div>
             </div>
           )}
           
-          {transcript && !isListening && (
+          {showProcessing && !isListening && (
+            <div className="text-sm text-center text-muted-foreground animate-fade-in">
+              <div className="flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin text-finance-teal" />
+                Processing voice input...
+              </div>
+            </div>
+          )}
+          
+          {transcript && !isListening && !showProcessing && (
             <div className="text-sm p-2 bg-finance-navy bg-opacity-5 rounded-md animate-fade-in border-l-2 border-finance-teal">
               <p className="font-semibold text-finance-navy">Recognized text:</p>
               <p className="italic">{transcript}</p>
+            </div>
+          )}
+          
+          {isSubmitting && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 rounded-md animate-fade-in z-10">
+              <div className="text-center">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto text-finance-teal" />
+                <p className="mt-2 font-medium text-finance-navy">Processing your request...</p>
+              </div>
             </div>
           )}
         </div>
